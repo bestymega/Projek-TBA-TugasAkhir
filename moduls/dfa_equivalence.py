@@ -10,7 +10,6 @@ def check_equivalence(dfa1: DFA, dfa2: DFA) -> bool:
     """
     print("\n=== Pengecekan Equivalensi DFA ===")
 
-    # Alphabet harus sama
     if dfa1.alphabet != dfa2.alphabet:
         print(f"  Alphabet berbeda!")
         print(f"  DFA 1: {sorted(dfa1.alphabet)}")
@@ -20,7 +19,6 @@ def check_equivalence(dfa1: DFA, dfa2: DFA) -> bool:
 
     alphabet = sorted(dfa1.alphabet)
 
-    # BFS pada product automaton
     start = (dfa1.start_state, dfa2.start_state)
     visited = set()
     queue = deque([start])
@@ -51,11 +49,9 @@ def check_equivalence(dfa1: DFA, dfa2: DFA) -> bool:
             ns1 = dfa1.get_next_state(s1, sym)
             ns2 = dfa2.get_next_state(s2, sym)
 
-            # Jika salah satu tidak punya transisi, anggap dead state
             if ns1 is None and ns2 is None:
                 continue
 
-            # Salah satu dead tapi lainnya tidak
             if ns1 is None:
                 ns1 = "_dead1_"
             if ns2 is None:

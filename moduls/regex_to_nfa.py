@@ -38,6 +38,11 @@ PRECEDENCE = {
 }
 
 
+def is_literal(char: str) -> bool:
+    """Mengembalikan True jika char adalah sebuah literal (bukan operator regex)."""
+    return char not in ('|', '*', '(', ')', CONCAT_OP)
+
+
 def add_concat_operator(regex: str) -> str:
     """
     Menyisipkan operator konkatenasi eksplisit '·' pada posisi yang tepat.
@@ -62,8 +67,8 @@ def add_concat_operator(regex: str) -> str:
         if i + 1 < len(regex):
             left = char
             right = regex[i + 1]
-            left_ok = left.isalpha() or left in (')', '*')
-            right_ok = right.isalpha() or right == '('
+            left_ok = is_literal(left) or left in (')', '*')
+            right_ok = is_literal(right) or right == '('
             if left_ok and right_ok:
                 result.append(CONCAT_OP)
     return ''.join(result)
@@ -94,7 +99,7 @@ def infix_to_postfix(regex: str) -> str:
     stack = []
 
     for token in regex:
-        if token.isalpha():
+        if is_literal(token):
             output.append(token)
 
         elif token == '(':
@@ -314,7 +319,7 @@ def regex_to_nfa(regex: str) -> NFA:
     stack: list = []
 
     for token in postfix:
-        if token.isalpha():
+        if is_literal(token):
             stack.append(_nfa_literal(token))
 
         elif token == '|':

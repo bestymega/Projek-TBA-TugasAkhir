@@ -913,16 +913,8 @@ with content_col:
             EPS          = "\u03b5"
             all_syms_nfa = nsim_alpha_list + [EPS]
 
-            # Bersihkan selectbox yang nilainya sudah tidak valid
-            options_nfa = ["-"] + nsim_states_list
-            for s in nsim_states_list:
-                for sym in all_syms_nfa:
-                    key = f"nsim_t_{s}_{sym}"
-                    if key in st.session_state and st.session_state[key] not in options_nfa:
-                        del st.session_state[key]
-
             if nsim_ready:
-                st.markdown("<div class='field-label' style='margin-top:1.2rem'>Transition Function (including epsilon)</div>", unsafe_allow_html=True)
+                st.markdown("<div class='field-label' style='margin-top:1.2rem'>TABEL FUNGSI TRANSISI NFA (&Delta;) - MASUKKAN TARGET DIPISAH KOMA (CONTOH: q0, q1)</div>", unsafe_allow_html=True)
 
                 hcols = st.columns([1.5] + [1] * len(all_syms_nfa))
                 with hcols[0]:
@@ -949,7 +941,7 @@ with content_col:
                         st.markdown(f"<div class='state-label {cls}'>{lbl}</div>", unsafe_allow_html=True)
                     for i, sym in enumerate(all_syms_nfa):
                         with rcols[i + 1]:
-                            st.selectbox("x", options_nfa, key=f"nsim_t_{s}_{sym}", label_visibility="collapsed")
+                            st.text_input("x", key=f"nsim_t_{s}_{sym}", placeholder="\u2205", label_visibility="collapsed")
 
             st.markdown("<div style='margin-top:1rem'></div>", unsafe_allow_html=True)
             nb1, nb2 = st.columns([4, 1])
@@ -975,9 +967,12 @@ with content_col:
                 transitions_built = {}
                 for s in nsim_states_list:
                     for sym in all_syms_nfa:
-                        val = st.session_state.get(f"nsim_t_{s}_{sym}", "-")
-                        if val and val != "-":
-                            transitions_built[(s, sym)] = {val}
+                        val = st.session_state.get(f"nsim_t_{s}_{sym}", "").replace(",", " ").strip()
+                        if val and val != "-" and val != "\u2205":
+                            targets = set(val.split())
+                            valid_targets = {t for t in targets if t in nsim_states_list}
+                            if valid_targets:
+                                transitions_built[(s, sym)] = valid_targets
 
                 nfa_obj = NFAModel(
                     states=set(nsim_states_list),

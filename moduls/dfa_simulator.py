@@ -8,26 +8,27 @@ def simulate_dfa(dfa: DFA, input_string: str) -> bool:
     """
     current_state = dfa.start_state
 
-    print(f"\n[Simulasi] Input: '{input_string}'")
-    print(f"  Start → {current_state}")
+    print(f"Input: '{input_string}'")
+    print(f"Start: {current_state}")
 
     for symbol in input_string:
         if symbol not in dfa.alphabet:
-            print(f"  ERROR: simbol '{symbol}' tidak ada di alphabet!")
+            print(f"ERROR: simbol '{symbol}' tidak ada di alphabet!")
             return False
 
         next_state = dfa.get_next_state(current_state, symbol)
         if next_state is None:
-            print(f"  δ({current_state}, {symbol}) → DEAD STATE")
-            print("  Hasil: DITOLAK ✗")
+            print(f"Step: {current_state} --({symbol})--> DEAD STATE")
+            print("Hasil: REJECTED")
             return False
 
-        print(f"  δ({current_state}, {symbol}) → {next_state}")
+        print(f"Step: {current_state} --({symbol})--> {next_state}")
         current_state = next_state
 
     accepted = current_state in dfa.accept_states
-    status = "DITERIMA ✓" if accepted else "DITOLAK ✗"
-    print(f"  State akhir: {current_state} → {status}")
+    status = "ACCEPTED" if accepted else "REJECTED"
+    print(f"End state: {current_state}")
+    print(f"Result: {status}")
     return accepted
 
 
@@ -35,7 +36,7 @@ def input_dfa() -> DFA:
     """Input DFA secara interaktif dari user."""
     dfa = DFA()
 
-    print("\n=== Input DFA ===")
+    print("\nInput DFA:")
 
     states_input = input("Masukkan semua states (pisah spasi, contoh: q0 q1 q2): ").split()
     for s in states_input:

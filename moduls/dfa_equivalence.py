@@ -8,7 +8,7 @@ def check_equivalence(dfa1: DFA, dfa2: DFA) -> bool:
     Dua DFA equivalen jika untuk semua string input, keduanya menghasilkan
     output yang sama (diterima/ditolak).
     """
-    print("\n=== Pengecekan Equivalensi DFA ===")
+    print("Pengecekan Equivalensi DFA")
 
     if dfa1.alphabet != dfa2.alphabet:
         print(f"  Alphabet berbeda!")

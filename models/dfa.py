@@ -24,7 +24,7 @@ class DFA:
         return self.transitions.get((state, symbol), None)
 
     def display(self):
-        print("\n=== DFA ===")
+        print("\nDFA Details:")
         print(f"States       : {sorted(self.states)}")
         print(f"Alphabet     : {sorted(self.alphabet)}")
         print(f"Start State  : {self.start_state}")

@@ -6,7 +6,7 @@ def minimize_dfa(dfa: DFA) -> DFA:
     """
     Minimasi DFA menggunakan algoritma Table-Filling (Myhill-Nerode).
     """
-    print("\n=== Minimasi DFA (Table-Filling) ===")
+    print("Minimasi DFA (Table-Filling)")
 
     states = sorted(dfa.states)
     alphabet = sorted(dfa.alphabet)

@@ -64,9 +64,7 @@ class NFA:
 
     def display(self):
         """Menampilkan informasi lengkap NFA ke konsol."""
-        print("=" * 55)
-        print("         NFA (Thompson Construction)")
-        print("=" * 55)
+        print("\nNFA (Thompson Construction)")
         print(f"\n{'States':<20}: {sorted(self.states)}")
         print(f"{'Alphabet':<20}: {sorted(self.alphabet)}")
         print(f"{'Start State':<20}: {self.start_state}")

@@ -1,7 +1,20 @@
-import streamlit as st
+"""
+app.py - DFA Command Center (Streamlit App)
+
+Antarmuka utama untuk:
+  1. DFA Simulator   — simulasi & animasi step-by-step
+  2. Regex to NFA    — konversi Thompson Construction
+  3. NFA Simulator   — simulasi epsilon-closure
+  4. DFA Minimizer   — minimisasi dengan Table-Filling
+  5. DFA Equivalence — pengecekan ekuivalensi dua DFA
+"""
+
 import io
 import sys
 import copy
+import time
+
+import streamlit as st
 
 from models.dfa import DFA
 from models.nfa import NFA as NFAModel
@@ -10,7 +23,10 @@ from moduls.dfa_equivalence import check_equivalence
 from moduls.dfa_simulator import simulate_dfa
 from moduls.regex_to_nfa import regex_to_nfa
 from moduls.nfa_simulator import NFASimulator
+from moduls.visualizer import generate_dfa_graph, generate_nfa_graph
 
+
+# ── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="DFA Command Center",
     page_icon="D",
@@ -18,9 +34,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ==============================================================================
-# CSS
-# ==============================================================================
+
+# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -99,18 +114,14 @@ div[role="radiogroup"] > label {
   transition: all 0.12s ease;
   margin: 0 !important;
 }
-div[role="radiogroup"] > label:hover {
-  background: var(--card) !important;
-}
+div[role="radiogroup"] > label:hover { background: var(--card) !important; }
 div[role="radiogroup"] > label[data-checked="true"],
 div[role="radiogroup"] > label[aria-checked="true"] {
   background: var(--wine-dim) !important;
   border-left: 2px solid var(--wine) !important;
 }
 div[role="radiogroup"] > label[data-checked="true"] p,
-div[role="radiogroup"] > label[aria-checked="true"] p {
-  color: var(--white) !important;
-}
+div[role="radiogroup"] > label[aria-checked="true"] p { color: var(--white) !important; }
 div[role="radiogroup"] > label span[data-baseweb="radio"] { display: none !important; }
 div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"] { margin-left: 0 !important; }
 div[role="radiogroup"] > label p {
@@ -135,7 +146,6 @@ div[data-testid="stTextInput"] input {
 }
 div[data-testid="stTextInput"] input:focus {
   border-color: var(--wine) !important;
-  outline: none !important;
   box-shadow: 0 0 0 1px var(--wine) !important;
 }
 div[data-testid="stTextInput"] > label { display: none !important; }
@@ -162,9 +172,7 @@ div[data-testid="stMultiSelect"] > div > div {
   font-size: 0.82rem !important;
   min-height: 38px !important;
 }
-div[data-testid="stMultiSelect"] > div > div:focus-within {
-  border-color: var(--wine) !important;
-}
+div[data-testid="stMultiSelect"] > div > div:focus-within { border-color: var(--wine) !important; }
 div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
   background: var(--wine-dim) !important;
   color: var(--white) !important;
@@ -176,30 +184,21 @@ div[data-testid="stMultiSelect"] > label { display: none !important; }
 /* BUTTONS */
 div[data-testid="stButton"] button[kind="primary"] {
   background: var(--wine) !important;
-  border: none !important;
-  border-radius: 4px !important;
-  color: var(--white) !important;
-  font-weight: 600 !important;
-  font-size: 0.75rem !important;
-  letter-spacing: 0.07em !important;
-  text-transform: uppercase !important;
-  min-height: 40px !important;
+  border: none !important; border-radius: 4px !important;
+  color: var(--white) !important; font-weight: 600 !important;
+  font-size: 0.75rem !important; letter-spacing: 0.07em !important;
+  text-transform: uppercase !important; min-height: 40px !important;
 }
-div[data-testid="stButton"] button[kind="primary"]:hover {
-  background: var(--wine-hover) !important;
-}
+div[data-testid="stButton"] button[kind="primary"]:hover { background: var(--wine-hover) !important; }
 div[data-testid="stButton"] button[kind="primary"]:disabled {
   background: var(--gray-dim) !important;
   color: var(--gray) !important;
 }
 div[data-testid="stButton"] button[kind="secondary"] {
   background: var(--card) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 4px !important;
-  color: var(--gray) !important;
-  font-weight: 600 !important;
-  font-size: 0.75rem !important;
-  text-transform: uppercase !important;
+  border: 1px solid var(--border) !important; border-radius: 4px !important;
+  color: var(--gray) !important; font-weight: 600 !important;
+  font-size: 0.75rem !important; text-transform: uppercase !important;
   min-height: 40px !important;
 }
 div[data-testid="stButton"] button[kind="secondary"]:hover {
@@ -207,23 +206,23 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
   color: var(--white) !important;
 }
 
-/* FIELD LABEL */
+/* TYPOGRAPHY */
 .field-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem; font-weight: 600;
   letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--gray); margin-bottom: 4px; margin-top: 0.9rem;
 }
-
-/* SECTION TITLE */
 .section-title {
   font-size: 1rem; font-weight: 700;
   color: var(--white); margin-bottom: 1.2rem;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--border);
 }
+h1, h2, h3 { color: var(--white) !important; }
+hr { border-color: var(--border) !important; margin: 1rem 0 !important; }
 
-/* TABLE */
+/* TRANSITION TABLE */
 .trans-table {
   border: 1px solid var(--border);
   border-radius: 5px; overflow: hidden;
@@ -231,8 +230,7 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 }
 .trans-table table { width: 100%; border-collapse: collapse; }
 .trans-table th {
-  background: var(--card);
-  color: var(--gray);
+  background: var(--card); color: var(--gray);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem; font-weight: 600;
   padding: 8px 12px; text-align: center;
@@ -240,11 +238,9 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
   letter-spacing: 0.06em; text-transform: uppercase;
 }
 .trans-table td {
-  color: var(--white);
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--white); font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem; padding: 8px 12px;
-  text-align: center;
-  border-bottom: 1px solid var(--border);
+  text-align: center; border-bottom: 1px solid var(--border);
 }
 .trans-table tr:last-child td { border-bottom: none; }
 .trans-table tr:hover td { background: var(--card); }
@@ -258,8 +254,7 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
   justify-content: center; padding: 0.8rem 0;
 }
 .badge {
-  display: inline-flex;
-  font-family: 'JetBrains Mono', monospace;
+  display: inline-flex; font-family: 'JetBrains Mono', monospace;
   font-size: 0.78rem; font-weight: 600;
   padding: 4px 10px; border-radius: 3px;
   border: 1px solid var(--border);
@@ -271,16 +266,14 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 
 /* RESULT BOXES */
 .result-accept {
-  background: var(--green-bg);
-  border: 1px solid var(--green);
+  background: var(--green-bg); border: 1px solid var(--green);
   border-left: 3px solid var(--green-text);
   border-radius: 4px; padding: 0.85rem 1rem;
   color: var(--green-text); font-size: 0.82rem;
   margin: 0.6rem 0; line-height: 1.5;
 }
 .result-reject {
-  background: var(--wine-dim);
-  border: 1px solid var(--wine);
+  background: var(--wine-dim); border: 1px solid var(--wine);
   border-left: 3px solid var(--wine-hover);
   border-radius: 4px; padding: 0.85rem 1rem;
   color: var(--white); font-size: 0.82rem;
@@ -289,14 +282,12 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 
 /* LOG BOX */
 .log-box {
-  background: var(--input-bg);
-  border: 1px solid var(--border);
+  background: var(--input-bg); border: 1px solid var(--border);
   border-radius: 4px; padding: 0.8rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem; color: var(--gray);
   white-space: pre-wrap; max-height: 160px;
-  overflow-y: auto; line-height: 1.7;
-  margin-top: 6px;
+  overflow-y: auto; line-height: 1.7; margin-top: 6px;
 }
 
 /* INFO NOTE */
@@ -308,10 +299,8 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 
 /* DISPLAY AREA */
 .display-area {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  min-height: 280px; padding: 1.2rem;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 5px; min-height: 280px; padding: 1.2rem;
   margin-bottom: 0.8rem;
   display: flex; flex-direction: column;
   justify-content: center; align-items: center;
@@ -324,33 +313,22 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 
 /* VERDICT BOX */
 .verdict-yes {
-  background: var(--green-bg);
-  border: 1px solid var(--green);
-  border-radius: 5px; padding: 1.5rem;
-  text-align: center; color: var(--green-text);
+  background: var(--green-bg); border: 1px solid var(--green);
+  border-radius: 5px; padding: 1.5rem; text-align: center; color: var(--green-text);
 }
 .verdict-no {
-  background: var(--wine-dim);
-  border: 1px solid var(--wine);
-  border-radius: 5px; padding: 1.5rem;
-  text-align: center; color: var(--white);
+  background: var(--wine-dim); border: 1px solid var(--wine);
+  border-radius: 5px; padding: 1.5rem; text-align: center; color: var(--white);
 }
 .verdict-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--gray);
-  margin-bottom: 4px;
+  text-transform: uppercase; color: var(--gray); margin-bottom: 4px;
 }
-.verdict-main {
-  font-size: 1.1rem; font-weight: 700;
-  letter-spacing: 0.05em;
-}
-.verdict-sub {
-  font-size: 0.75rem; font-weight: 400;
-  margin-top: 6px; opacity: 0.75;
-}
+.verdict-main { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; }
+.verdict-sub  { font-size: 0.75rem; font-weight: 400; margin-top: 6px; opacity: 0.75; }
 
-/* TRANSITION TABLE HEADER IN FORM */
+/* FORM TABLE */
 .th-row {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem; font-weight: 600;
@@ -369,24 +347,20 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 
 /* STAT CARD */
 .stat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 5px; padding: 0.9rem;
-  text-align: center;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 5px; padding: 0.9rem; text-align: center;
 }
 .stat-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem; color: var(--gray);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
 }
 .stat-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1.3rem; font-weight: 700;
-  color: var(--white);
+  font-size: 1.3rem; font-weight: 700; color: var(--white);
 }
 
-/* DFA LABEL TAG (in table header for DFA 1 / DFA 2) */
+/* DFA TAG (untuk Equivalence) */
 .dfa-tag {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem; font-weight: 700;
@@ -397,19 +371,20 @@ div[data-testid="stButton"] button[kind="secondary"]:hover {
 .dfa-tag-1 { background: var(--wine-dim); color: var(--wine-hover); border: 1px solid var(--wine); }
 .dfa-tag-2 { background: var(--card); color: var(--gray); border: 1px solid var(--border); }
 
-h1, h2, h3 { color: var(--white) !important; }
-hr { border-color: var(--border) !important; margin: 1rem 0 !important; }
-div[data-testid="stAlert"] { display: none !important; }
+/* ANIMATION STATUS BAR */
+.anim-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem; color: var(--gray);
+  text-align: center; padding: 4px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==============================================================================
-# HELPER FUNCTIONS
-# ==============================================================================
+# ── Helper Functions ───────────────────────────────────────────────────────────
 
 def capture(fn, *args, **kwargs):
-    """Run fn and capture its stdout output."""
+    """Jalankan fn, kembalikan (result, stdout_string)."""
     buf = io.StringIO()
     old = sys.stdout
     sys.stdout = buf
@@ -418,8 +393,8 @@ def capture(fn, *args, **kwargs):
     return result, buf.getvalue()
 
 
-def build_dfa(prefix, states, alphabet):
-    """Build a DFA object from Streamlit session state."""
+def build_dfa(prefix: str, states: list, alphabet: list) -> DFA:
+    """Bangun objek DFA dari session state Streamlit."""
     start_raw  = st.session_state.get(f"{prefix}start", "").strip()
     accept_raw = st.session_state.get(f"{prefix}accept", "").replace(",", " ").strip()
     dfa = DFA()
@@ -441,8 +416,8 @@ def build_dfa(prefix, states, alphabet):
     return dfa
 
 
-def render_state_badges(states, start_state, accept_states):
-    """Render colored state badges."""
+def render_state_badges(states, start_state, accept_states) -> str:
+    """Kembalikan HTML badge-badge state."""
     html = ""
     for s in sorted(states):
         is_s = s == start_state
@@ -455,11 +430,11 @@ def render_state_badges(states, start_state, accept_states):
             html += f"<span class='badge badge-accept'>* {s}</span>"
         else:
             html += f"<span class='badge'>{s}</span>"
-    st.markdown(f"<div class='badges-row'>{html}</div>", unsafe_allow_html=True)
+    return f"<div class='badges-row'>{html}</div>"
 
 
-def render_dfa_table(dfa):
-    """Render the DFA transition table as HTML."""
+def render_dfa_table(dfa) -> str:
+    """Kembalikan HTML tabel transisi DFA."""
     alphabet = sorted(dfa.alphabet)
     states   = sorted(dfa.states)
     rows = ""
@@ -486,15 +461,12 @@ def render_dfa_table(dfa):
         rows += row + "</tr>"
 
     hdr = "<th style='text-align:left'>State</th>" + "".join(f"<th>{a}</th>" for a in alphabet)
-    st.markdown(
-        f"<div class='trans-table'><table><tr>{hdr}</tr>{rows}</table></div>",
-        unsafe_allow_html=True
-    )
+    return f"<div class='trans-table'><table><tr>{hdr}</tr>{rows}</table></div>"
 
 
-def render_nfa_table(nfa):
-    """Render NFA transition table (with epsilon column)."""
-    EPS = "\u03b5"
+def render_nfa_table(nfa) -> str:
+    """Kembalikan HTML tabel transisi NFA (dengan kolom epsilon)."""
+    EPS      = "\u03b5"
     all_syms = sorted(nfa.alphabet) + [EPS]
     states   = sorted(nfa.states)
     rows = ""
@@ -521,19 +493,16 @@ def render_nfa_table(nfa):
         rows += row + "</tr>"
 
     hdr = "<th style='text-align:left'>State</th>" + "".join(
-        f"<th>&epsilon;</th>" if sym == EPS else f"<th>{sym}</th>"
+        "<th>&epsilon;</th>" if sym == EPS else f"<th>{sym}</th>"
         for sym in all_syms
     )
-    st.markdown(
-        f"<div class='trans-table'><table><tr>{hdr}</tr>{rows}</table></div>",
-        unsafe_allow_html=True
-    )
+    return f"<div class='trans-table'><table><tr>{hdr}</tr>{rows}</table></div>"
 
 
-def dfa_config_form(prefix):
+def dfa_config_form(prefix: str):
     """
-    Render DFA configuration form.
-    Returns (states, alphabet, is_ready).
+    Render form konfigurasi DFA.
+    Mengembalikan (states, alphabet, is_ready).
     """
     st.markdown("<div class='section-title'>Configuration</div>", unsafe_allow_html=True)
 
@@ -550,7 +519,7 @@ def dfa_config_form(prefix):
         st.text_input("ac", key=f"{prefix}accept", placeholder="q1", label_visibility="collapsed")
 
     states_raw = st.session_state.get(f"{prefix}states_raw", "").replace(",", " ").strip()
-    alpha_raw  = st.session_state.get(f"{prefix}alpha_raw", "").replace(",", " ").strip()
+    alpha_raw  = st.session_state.get(f"{prefix}alpha_raw",  "").replace(",", " ").strip()
 
     if not states_raw or not alpha_raw:
         st.markdown("""
@@ -564,7 +533,7 @@ def dfa_config_form(prefix):
     alphabet = alpha_raw.split()
     options  = ["-"] + states
 
-    # Clean up stale selectbox values
+    # Bersihkan nilai selectbox yang sudah tidak valid
     for s in states:
         for sym in alphabet:
             key = f"{prefix}t_{s}_{sym}"
@@ -576,7 +545,7 @@ def dfa_config_form(prefix):
     start_raw  = st.session_state.get(f"{prefix}start", "").strip()
     accept_set = set(st.session_state.get(f"{prefix}accept", "").replace(",", " ").split())
 
-    # Table header row
+    # Header tabel
     hcols = st.columns([1.5] + [1] * len(alphabet))
     with hcols[0]:
         st.markdown("<div class='th-row'>State</div>", unsafe_allow_html=True)
@@ -584,7 +553,7 @@ def dfa_config_form(prefix):
         with hcols[i + 1]:
             st.markdown(f"<div class='th-row' style='text-align:center'>{sym.upper()}</div>", unsafe_allow_html=True)
 
-    # Table rows
+    # Baris-baris transisi
     for s in states:
         is_s = s == start_raw
         is_a = s in accept_set
@@ -607,9 +576,141 @@ def dfa_config_form(prefix):
     return states, alphabet, True
 
 
-# ==============================================================================
-# NAVBAR
-# ==============================================================================
+def animate_dfa(dfa: DFA, input_string: str, graph_placeholder, status_placeholder):
+    """
+    Animasi simulasi DFA step-by-step.
+    Setiap langkah: sorot state aktif di graf, lalu tunggu sebentar.
+    Mengembalikan (accepted: bool, log: str).
+    """
+    current = dfa.start_state
+    log_lines = [f"Input : '{input_string}'", f"Start : {current}"]
+
+    # Tampilkan state awal
+    graph_placeholder.graphviz_chart(
+        generate_dfa_graph(dfa, active_states={current}),
+        use_container_width=True
+    )
+    status_placeholder.markdown(
+        f"<div class='anim-status'>State: <b>{current}</b> | Membaca...</div>",
+        unsafe_allow_html=True
+    )
+    time.sleep(0.7)
+
+    for symbol in input_string:
+        if symbol not in dfa.alphabet:
+            log_lines.append(f"ERROR: simbol '{symbol}' tidak ada di alphabet!")
+            break
+
+        next_state = dfa.get_next_state(current, symbol)
+        if next_state is None:
+            log_lines.append(f"Step  : {current} --({symbol})--> DEAD STATE")
+            log_lines.append("Result: REJECTED")
+            graph_placeholder.graphviz_chart(
+                generate_dfa_graph(dfa, active_states=set()),
+                use_container_width=True
+            )
+            status_placeholder.markdown(
+                "<div class='anim-status' style='color:#A31F35'>Dead state — ditolak.</div>",
+                unsafe_allow_html=True
+            )
+            return False, "\n".join(log_lines)
+
+        log_lines.append(f"Step  : {current} --({symbol})--> {next_state}")
+        current = next_state
+
+        graph_placeholder.graphviz_chart(
+            generate_dfa_graph(dfa, active_states={current}),
+            use_container_width=True
+        )
+        status_placeholder.markdown(
+            f"<div class='anim-status'>Baca '<b>{symbol}</b>' → state: <b>{current}</b></div>",
+            unsafe_allow_html=True
+        )
+        time.sleep(0.7)
+
+    accepted = current in dfa.accept_states
+    log_lines.append(f"End   : {current}")
+    log_lines.append(f"Result: {'ACCEPTED' if accepted else 'REJECTED'}")
+
+    # Sorot warna akhir (accept=hijau, reject=merah)
+    if accepted:
+        final_active = {current}
+        status_text  = f"<div class='anim-status' style='color:#6DBF82'>Diterima di state <b>{current}</b></div>"
+    else:
+        final_active = set()
+        status_text  = f"<div class='anim-status' style='color:#A31F35'>Ditolak di state <b>{current}</b></div>"
+
+    graph_placeholder.graphviz_chart(
+        generate_dfa_graph(dfa, active_states=final_active),
+        use_container_width=True
+    )
+    status_placeholder.markdown(status_text, unsafe_allow_html=True)
+
+    return accepted, "\n".join(log_lines)
+
+
+def animate_nfa(nfa, input_string: str, graph_placeholder, status_placeholder):
+    """
+    Animasi simulasi NFA step-by-step menggunakan epsilon-closure.
+    Mengembalikan (accepted: bool, log: str).
+    """
+    sim = NFASimulator()
+    log_lines = [f"Input : '{input_string}'"]
+
+    current_states = sim.epsilon_closure(nfa, {nfa.start_state})
+    log_lines.append(f"ε-closure awal: {sorted(current_states)}")
+
+    graph_placeholder.graphviz_chart(
+        generate_nfa_graph(nfa, active_states=current_states),
+        use_container_width=True
+    )
+    status_placeholder.markdown(
+        f"<div class='anim-status'>Initial ε-closure: <b>{sorted(current_states)}</b></div>",
+        unsafe_allow_html=True
+    )
+    time.sleep(0.7)
+
+    for symbol in input_string:
+        if symbol not in nfa.alphabet:
+            log_lines.append(f"ERROR: simbol '{symbol}' tidak ada di alphabet!")
+            break
+
+        next_raw       = sim.move(nfa, current_states, symbol)
+        current_states = sim.epsilon_closure(nfa, next_raw)
+
+        log_lines.append(f"Baca '{symbol}' → move: {sorted(next_raw)} → ε-closure: {sorted(current_states)}")
+
+        graph_placeholder.graphviz_chart(
+            generate_nfa_graph(nfa, active_states=current_states),
+            use_container_width=True
+        )
+        status_placeholder.markdown(
+            f"<div class='anim-status'>Baca '<b>{symbol}</b>' → states: <b>{sorted(current_states)}</b></div>",
+            unsafe_allow_html=True
+        )
+        time.sleep(0.7)
+
+    accepted = bool(current_states & nfa.accept_states)
+    log_lines.append(f"Final states : {sorted(current_states)}")
+    log_lines.append(f"Accept states: {sorted(nfa.accept_states)}")
+    log_lines.append(f"Result       : {'ACCEPTED' if accepted else 'REJECTED'}")
+
+    final_active = current_states if accepted else set()
+    status_text  = (
+        f"<div class='anim-status' style='color:#6DBF82'>Diterima — states akhir: <b>{sorted(current_states)}</b></div>"
+        if accepted else
+        f"<div class='anim-status' style='color:#A31F35'>Ditolak — tidak ada state akhir yang cocok.</div>"
+    )
+    graph_placeholder.graphviz_chart(
+        generate_nfa_graph(nfa, active_states=final_active),
+        use_container_width=True
+    )
+    status_placeholder.markdown(status_text, unsafe_allow_html=True)
+
+    return accepted, "\n".join(log_lines)
+
+
+# ── Navbar ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class='navbar'>
   <div class='navbar-brand'><span>DFA</span> Command Center</div>
@@ -618,11 +719,10 @@ st.markdown("""
 <div style='height:54px'></div>
 """, unsafe_allow_html=True)
 
+
+# ── Layout Utama ───────────────────────────────────────────────────────────────
 nav_col, content_col = st.columns([1, 4.5], gap="large")
 
-# ==============================================================================
-# SIDENAV
-# ==============================================================================
 with nav_col:
     st.markdown("""
     <div class='sidenav-header'>
@@ -633,25 +733,16 @@ with nav_col:
 
     menu = st.radio(
         "nav",
-        [
-            "DFA Simulator",
-            "Regex to NFA",
-            "NFA Simulator",
-            "DFA Minimizer",
-            "DFA Equivalence",
-        ],
+        ["DFA Simulator", "Regex to NFA", "NFA Simulator", "DFA Minimizer", "DFA Equivalence"],
         label_visibility="collapsed",
     )
 
-# ==============================================================================
-# CONTENT
-# ==============================================================================
+
+# ── Content ────────────────────────────────────────────────────────────────────
 with content_col:
     st.markdown("<div style='padding-top:1rem'></div>", unsafe_allow_html=True)
 
-    # =========================================================================
-    # 1. DFA SIMULATOR
-    # =========================================================================
+    # ── 1. DFA SIMULATOR ──────────────────────────────────────────────────────
     if menu == "DFA Simulator":
         left, right = st.columns([1, 1.8], gap="large")
 
@@ -661,10 +752,7 @@ with content_col:
 
             bc1, bc2 = st.columns([4, 1])
             with bc1:
-                deploy = st.button(
-                    "Deploy DFA", use_container_width=True, type="primary",
-                    disabled=not ready
-                )
+                deploy = st.button("Deploy DFA", use_container_width=True, type="primary", disabled=not ready)
             with bc2:
                 if st.button("Reset", use_container_width=True, type="secondary", key="sim_reset"):
                     for k in list(st.session_state.keys()):
@@ -675,25 +763,23 @@ with content_col:
         with right:
             st.markdown("<div class='section-title'>DFA Visualization</div>", unsafe_allow_html=True)
 
-            # Build and store DFA on deploy
             if deploy and ready:
                 dfa = build_dfa("sim_", states, alphabet)
-                st.session_state["sim_dfa"] = dfa
+                st.session_state["sim_dfa"]   = dfa
                 st.session_state["sim_ready"] = True
 
-            st.markdown("<div class='display-area'>", unsafe_allow_html=True)
-            if st.session_state.get("sim_ready"):
-                dfa = st.session_state["sim_dfa"]
-                render_state_badges(dfa.states, dfa.start_state, dfa.accept_states)
-                render_dfa_table(dfa)
-            else:
-                st.markdown("<div class='idle-text'>Deploy a DFA to view it here.</div>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            graph_ph  = st.empty()
+            status_ph = st.empty()
 
             if st.session_state.get("sim_ready"):
                 dfa = st.session_state["sim_dfa"]
+                graph_ph.graphviz_chart(generate_dfa_graph(dfa), use_container_width=True)
+
+                content = render_state_badges(dfa.states, dfa.start_state, dfa.accept_states)
+                content += render_dfa_table(dfa)
+                st.markdown(f"<div class='display-area'>{content}</div>", unsafe_allow_html=True)
+
                 st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
-
                 sc1, sc2 = st.columns([3, 1.2])
                 with sc1:
                     test_str = st.text_input(
@@ -704,24 +790,19 @@ with content_col:
                     run = st.button("Run", type="primary", use_container_width=True, key="sim_run")
 
                 if run:
-                    accepted, log = capture(simulate_dfa, dfa, test_str)
                     label = f'"{test_str}"' if test_str else "empty string"
+                    accepted, log = animate_dfa(dfa, test_str, graph_ph, status_ph)
                     if accepted:
-                        st.markdown(
-                            f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(
-                            f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>", unsafe_allow_html=True)
                     st.markdown("<div class='field-label' style='margin-top:0.8rem'>Execution Log</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='log-box'>{log}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='log-box'>{log.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
-    # =========================================================================
-    # 2. REGEX TO NFA
-    # =========================================================================
+            else:
+                graph_ph.markdown("<div class='display-area'><div class='idle-text'>Deploy a DFA to view it here.</div></div>", unsafe_allow_html=True)
+
+    # ── 2. REGEX TO NFA ───────────────────────────────────────────────────────
     elif menu == "Regex to NFA":
         left, right = st.columns([1, 1.8], gap="large")
 
@@ -755,32 +836,20 @@ with content_col:
                     st.session_state["regex_error"] = str(e)
                     st.session_state["regex_ready"] = False
 
-            st.markdown("<div class='display-area'>", unsafe_allow_html=True)
+            graph_ph  = st.empty()
+            status_ph = st.empty()
+
             if st.session_state.get("regex_ready"):
                 nfa   = st.session_state["regex_nfa"]
                 regex = st.session_state["regex_input"]
-                st.markdown(
-                    f"<div style='font-family:JetBrains Mono;color:var(--wine-hover);"
-                    f"font-size:1rem;font-weight:700;margin-bottom:0.8rem;"
-                    f"text-align:center'>{regex}</div>",
-                    unsafe_allow_html=True
-                )
-                render_state_badges(nfa.states, nfa.start_state, nfa.accept_states)
-                render_nfa_table(nfa)
-            elif st.session_state.get("regex_error"):
-                st.markdown(
-                    f"<div style='color:var(--wine-hover);font-family:JetBrains Mono;"
-                    f"font-size:0.82rem'>Error: {st.session_state['regex_error']}</div>",
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown("<div class='idle-text'>Enter a regex and click Generate NFA.</div>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                graph_ph.graphviz_chart(generate_nfa_graph(nfa), use_container_width=True)
 
-            if st.session_state.get("regex_ready"):
-                nfa = st.session_state["regex_nfa"]
+                content  = f"<div style='font-family:JetBrains Mono;color:var(--wine-hover);font-size:1rem;font-weight:700;margin-bottom:0.8rem;text-align:center'>{regex}</div>"
+                content += render_state_badges(nfa.states, nfa.start_state, nfa.accept_states)
+                content += render_nfa_table(nfa)
+                st.markdown(f"<div class='display-area'>{content}</div>", unsafe_allow_html=True)
+
                 st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
-
                 rc1, rc2 = st.columns([3, 1.2])
                 with rc1:
                     test_regex = st.text_input(
@@ -791,31 +860,25 @@ with content_col:
                     run_regex = st.button("Run", type="primary", use_container_width=True, key="regex_run")
 
                 if run_regex:
-                    sim = NFASimulator()
                     label = f'"{test_regex}"' if test_regex else "empty string"
                     try:
-                        accepted, log = capture(sim.simulate, nfa, test_regex, verbose=True)
+                        accepted, log = animate_nfa(nfa, test_regex, graph_ph, status_ph)
                         if accepted:
-                            st.markdown(
-                                f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>",
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(
-                                f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>",
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>", unsafe_allow_html=True)
                         st.markdown("<div class='field-label' style='margin-top:0.8rem'>Simulation Log</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='log-box'>{log}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='log-box'>{log.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
                     except ValueError as e:
-                        st.markdown(
-                            f"<div class='result-reject'><b>Error:</b> {e}</div>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<div class='result-reject'><b>Error:</b> {e}</div>", unsafe_allow_html=True)
 
-    # =========================================================================
-    # 3. NFA SIMULATOR
-    # =========================================================================
+            elif st.session_state.get("regex_error"):
+                content = f"<div style='color:var(--wine-hover);font-family:JetBrains Mono;font-size:0.82rem'>Error: {st.session_state['regex_error']}</div>"
+                graph_ph.markdown(f"<div class='display-area'>{content}</div>", unsafe_allow_html=True)
+            else:
+                graph_ph.markdown("<div class='display-area'><div class='idle-text'>Enter a regex and click Generate NFA.</div></div>", unsafe_allow_html=True)
+
+    # ── 3. NFA SIMULATOR ──────────────────────────────────────────────────────
     elif menu == "NFA Simulator":
         left, right = st.columns([1, 1.8], gap="large")
 
@@ -836,24 +899,31 @@ with content_col:
             st.markdown("<div class='field-label'>Accept States</div>", unsafe_allow_html=True)
             st.text_input("nac", key="nsim_accept", placeholder="q3", label_visibility="collapsed")
 
-            # Parse values
-            nsim_states_raw  = st.session_state.get("nsim_states", "").replace(",", " ").strip()
-            nsim_alpha_raw   = st.session_state.get("nsim_alpha",  "").replace(",", " ").strip()
-            nsim_start       = st.session_state.get("nsim_start",  "").strip()
-            nsim_accept_raw  = st.session_state.get("nsim_accept", "").replace(",", " ").strip()
+            # Parse input
+            nsim_states_raw = st.session_state.get("nsim_states", "").replace(",", " ").strip()
+            nsim_alpha_raw  = st.session_state.get("nsim_alpha",  "").replace(",", " ").strip()
+            nsim_start      = st.session_state.get("nsim_start",  "").strip()
+            nsim_accept_raw = st.session_state.get("nsim_accept", "").replace(",", " ").strip()
 
             nsim_states_list = nsim_states_raw.split() if nsim_states_raw else []
             nsim_alpha_list  = nsim_alpha_raw.split()  if nsim_alpha_raw  else []
             nsim_accept_set  = set(nsim_accept_raw.split())
             nsim_ready       = bool(nsim_states_raw and nsim_alpha_raw and nsim_start)
 
-            EPS = "\u03b5"
+            EPS          = "\u03b5"
+            all_syms_nfa = nsim_alpha_list + [EPS]
+
+            # Bersihkan selectbox yang nilainya sudah tidak valid
+            options_nfa = ["-"] + nsim_states_list
+            for s in nsim_states_list:
+                for sym in all_syms_nfa:
+                    key = f"nsim_t_{s}_{sym}"
+                    if key in st.session_state and st.session_state[key] not in options_nfa:
+                        del st.session_state[key]
 
             if nsim_ready:
-                all_syms_nfa = nsim_alpha_list + [EPS]
                 st.markdown("<div class='field-label' style='margin-top:1.2rem'>Transition Function (including epsilon)</div>", unsafe_allow_html=True)
 
-                # Table header
                 hcols = st.columns([1.5] + [1] * len(all_syms_nfa))
                 with hcols[0]:
                     st.markdown("<div class='th-row'>State</div>", unsafe_allow_html=True)
@@ -862,7 +932,6 @@ with content_col:
                         disp = "&epsilon;" if sym == EPS else sym.upper()
                         st.markdown(f"<div class='th-row' style='text-align:center'>{disp}</div>", unsafe_allow_html=True)
 
-                # Table rows with multiselect (NFA allows multiple targets)
                 for s in nsim_states_list:
                     is_s = s == nsim_start
                     is_a = s in nsim_accept_set
@@ -880,20 +949,12 @@ with content_col:
                         st.markdown(f"<div class='state-label {cls}'>{lbl}</div>", unsafe_allow_html=True)
                     for i, sym in enumerate(all_syms_nfa):
                         with rcols[i + 1]:
-                            st.multiselect(
-                                "t", nsim_states_list,
-                                key=f"nsim_t_{s}_{sym}",
-                                label_visibility="collapsed",
-                                placeholder="-"
-                            )
+                            st.selectbox("x", options_nfa, key=f"nsim_t_{s}_{sym}", label_visibility="collapsed")
 
             st.markdown("<div style='margin-top:1rem'></div>", unsafe_allow_html=True)
             nb1, nb2 = st.columns([4, 1])
             with nb1:
-                deploy_nfa = st.button(
-                    "Deploy NFA", use_container_width=True,
-                    type="primary", disabled=not nsim_ready
-                )
+                deploy_nfa = st.button("Deploy NFA", use_container_width=True, type="primary", disabled=not nsim_ready)
             with nb2:
                 if st.button("Reset", use_container_width=True, type="secondary", key="nsim_reset"):
                     for k in list(st.session_state.keys()):
@@ -911,40 +972,36 @@ with content_col:
             st.markdown("<div class='section-title'>NFA Visualization</div>", unsafe_allow_html=True)
 
             if deploy_nfa and nsim_ready:
-                # Build NFA from form
-                all_syms_nfa = nsim_alpha_list + [EPS]
                 transitions_built = {}
                 for s in nsim_states_list:
                     for sym in all_syms_nfa:
-                        targets = st.session_state.get(f"nsim_t_{s}_{sym}", [])
-                        if targets:
-                            transitions_built[(s, sym)] = set(targets)
-
-                accept_valid = {t for t in nsim_accept_set if t in nsim_states_list}
+                        val = st.session_state.get(f"nsim_t_{s}_{sym}", "-")
+                        if val and val != "-":
+                            transitions_built[(s, sym)] = {val}
 
                 nfa_obj = NFAModel(
                     states=set(nsim_states_list),
                     alphabet=set(nsim_alpha_list),
                     start_state=nsim_start,
-                    accept_states=accept_valid,
+                    accept_states={t for t in nsim_accept_set if t in nsim_states_list},
                     transitions=transitions_built,
                 )
                 st.session_state["nsim_nfa"]   = nfa_obj
                 st.session_state["nsim_ready"] = True
 
-            st.markdown("<div class='display-area'>", unsafe_allow_html=True)
+            graph_ph  = st.empty()
+            status_ph = st.empty()
+
             if st.session_state.get("nsim_ready"):
                 nfa_d = st.session_state["nsim_nfa"]
-                render_state_badges(nfa_d.states, nfa_d.start_state, nfa_d.accept_states)
-                render_nfa_table(nfa_d)
-            else:
-                st.markdown("<div class='idle-text'>Define the NFA and click Deploy.</div>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                graph_ph.graphviz_chart(generate_nfa_graph(nfa_d), use_container_width=True)
 
-            if st.session_state.get("nsim_ready"):
+                content  = render_state_badges(nfa_d.states, nfa_d.start_state, nfa_d.accept_states)
+                content += render_nfa_table(nfa_d)
+                st.markdown(f"<div class='display-area'>{content}</div>", unsafe_allow_html=True)
+
                 nfa_r = st.session_state["nsim_nfa"]
                 st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
-
                 tc1, tc2 = st.columns([3, 1.2])
                 with tc1:
                     test_nfa_str = st.text_input(
@@ -955,31 +1012,22 @@ with content_col:
                     run_nfa = st.button("Run", type="primary", use_container_width=True, key="nsim_run")
 
                 if run_nfa:
-                    sim = NFASimulator()
                     label = f'"{test_nfa_str}"' if test_nfa_str else "empty string"
                     try:
-                        accepted, log = capture(sim.simulate, nfa_r, test_nfa_str, verbose=True)
+                        accepted, log = animate_nfa(nfa_r, test_nfa_str, graph_ph, status_ph)
                         if accepted:
-                            st.markdown(
-                                f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>",
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"<div class='result-accept'><b>Accepted</b> &mdash; {label}</div>", unsafe_allow_html=True)
                         else:
-                            st.markdown(
-                                f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>",
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"<div class='result-reject'><b>Rejected</b> &mdash; {label}</div>", unsafe_allow_html=True)
                         st.markdown("<div class='field-label' style='margin-top:0.8rem'>Simulation Log</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='log-box'>{log}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='log-box'>{log.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
                     except ValueError as e:
-                        st.markdown(
-                            f"<div class='result-reject'><b>Error:</b> {e}</div>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<div class='result-reject'><b>Error:</b> {e}</div>", unsafe_allow_html=True)
 
-    # =========================================================================
-    # 4. DFA MINIMIZER
-    # =========================================================================
+            else:
+                graph_ph.markdown("<div class='display-area'><div class='idle-text'>Define the NFA and click Deploy.</div></div>", unsafe_allow_html=True)
+
+    # ── 4. DFA MINIMIZER ──────────────────────────────────────────────────────
     elif menu == "DFA Minimizer":
         left, right = st.columns([1, 1.8], gap="large")
 
@@ -989,10 +1037,7 @@ with content_col:
 
             mb1, mb2 = st.columns([4, 1])
             with mb1:
-                do_min = st.button(
-                    "Minimize DFA", use_container_width=True,
-                    type="primary", disabled=not ready
-                )
+                do_min = st.button("Minimize DFA", use_container_width=True, type="primary", disabled=not ready)
             with mb2:
                 if st.button("Reset", use_container_width=True, type="secondary", key="min_reset"):
                     for k in list(st.session_state.keys()):
@@ -1013,10 +1058,10 @@ with content_col:
                 dfa_orig = build_dfa("min_", states, alphabet)
                 try:
                     dfa_min, log = capture(minimize_dfa, copy.deepcopy(dfa_orig))
-                    st.session_state["min_orig"]  = dfa_orig
+                    st.session_state["min_orig"]   = dfa_orig
                     st.session_state["min_result"] = dfa_min
-                    st.session_state["min_log"]   = log
-                    st.session_state["min_done"]  = True
+                    st.session_state["min_log"]    = log
+                    st.session_state["min_done"]   = True
                     st.session_state.pop("min_error", None)
                 except Exception as e:
                     st.session_state["min_error"] = str(e)
@@ -1027,10 +1072,11 @@ with content_col:
                 dfa_min  = st.session_state["min_result"]
                 log      = st.session_state["min_log"]
 
-                st.markdown("<div class='display-area'>", unsafe_allow_html=True)
-                render_state_badges(dfa_min.states, dfa_min.start_state, dfa_min.accept_states)
-                render_dfa_table(dfa_min)
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.graphviz_chart(generate_dfa_graph(dfa_min), use_container_width=True)
+
+                content  = render_state_badges(dfa_min.states, dfa_min.start_state, dfa_min.accept_states)
+                content += render_dfa_table(dfa_min)
+                st.markdown(f"<div class='display-area'>{content}</div>", unsafe_allow_html=True)
 
                 reduction = len(dfa_orig.states) - len(dfa_min.states)
                 pct       = int(reduction / max(len(dfa_orig.states), 1) * 100)
@@ -1056,22 +1102,14 @@ with content_col:
                     </div>""", unsafe_allow_html=True)
 
                 st.markdown("<div class='field-label' style='margin-top:0.8rem'>Process Log</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='log-box'>{log}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='log-box'>{log.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
             elif st.session_state.get("min_error"):
-                st.markdown(
-                    f"<div class='result-reject'><b>Error:</b> {st.session_state['min_error']}</div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div class='result-reject'><b>Error:</b> {st.session_state['min_error']}</div>", unsafe_allow_html=True)
             else:
-                st.markdown(
-                    "<div class='display-area'><div class='idle-text'>Configure a DFA and click Minimize.</div></div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown("<div class='display-area'><div class='idle-text'>Configure a DFA and click Minimize.</div></div>", unsafe_allow_html=True)
 
-    # =========================================================================
-    # 5. DFA EQUIVALENCE
-    # =========================================================================
+    # ── 5. DFA EQUIVALENCE ────────────────────────────────────────────────────
     elif menu == "DFA Equivalence":
         st.markdown("<div class='section-title'>DFA Equivalence Checker</div>", unsafe_allow_html=True)
         st.markdown(
@@ -1082,18 +1120,16 @@ with content_col:
         )
 
         col_a, col_b = st.columns(2, gap="large")
-
         with col_a:
             st.markdown("<div class='dfa-tag dfa-tag-1'>DFA 1</div>", unsafe_allow_html=True)
             states_a, alpha_a, ready_a = dfa_config_form("eq1_")
-
         with col_b:
             st.markdown("<div class='dfa-tag dfa-tag-2'>DFA 2</div>", unsafe_allow_html=True)
             states_b, alpha_b, ready_b = dfa_config_form("eq2_")
 
         st.markdown("<div style='margin-top:1.2rem'></div>", unsafe_allow_html=True)
-        ec1, ec2, ec3 = st.columns([2, 2, 2])
-        with ec2:
+        _, ec_mid, __ = st.columns([2, 2, 2])
+        with ec_mid:
             do_eq = st.button(
                 "Check Equivalence", use_container_width=True,
                 type="primary", disabled=not (ready_a and ready_b)
@@ -1135,13 +1171,10 @@ with content_col:
                     </div>""", unsafe_allow_html=True)
 
             st.markdown("<div class='field-label' style='margin-top:1rem'>Analysis Log</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='log-box'>{log}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='log-box'>{log.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
         elif st.session_state.get("eq_error"):
-            st.markdown(
-                f"<div class='result-reject'><b>Error:</b> {st.session_state['eq_error']}</div>",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"<div class='result-reject'><b>Error:</b> {st.session_state['eq_error']}</div>", unsafe_allow_html=True)
         else:
             _, mid, __ = st.columns([1, 2, 1])
             with mid:

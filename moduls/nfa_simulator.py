@@ -128,12 +128,8 @@ class NFASimulator:
         self.current_states = self.epsilon_closure(nfa, {nfa.start_state})
 
         if verbose:
-            print("=" * 50)
-            print("              NFA SIMULATION")
-            print("=" * 50)
-            print(f"\nInput String : {input_string}")
-            print(f"\nInitial ε-closure:")
-            print(f"{sorted(self.current_states)}")
+            print(f"Input String : {input_string}")
+            print(f"Initial ε-closure: {sorted(self.current_states)}")
 
         for symbol in input_string:
             if symbol not in nfa.alphabet:
@@ -145,24 +141,17 @@ class NFASimulator:
             self.current_states = self.epsilon_closure(nfa, next_states)
 
             if verbose:
-                print(f"\n{'-' * 40}")
-                print(f"Read symbol : '{symbol}'")
-                print(f"\nMove:")
-                print(f"{sorted(next_states)}")
-                print(f"\nε-closure:")
-                print(f"{sorted(self.current_states)}")
+                print(f"\nRead symbol : '{symbol}'")
+                print(f"Move: {sorted(next_states)}")
+                print(f"ε-closure: {sorted(self.current_states)}")
 
         accepted: bool = bool(self.current_states & nfa.accept_states)
 
         if verbose:
-            print(f"\n{'=' * 50}")
-            print(f"Current States :")
-            print(f"{sorted(self.current_states)}")
-            print(f"\nAccept States :")
-            print(f"{sorted(nfa.accept_states)}")
+            print(f"\nFinal States : {sorted(self.current_states)}")
+            print(f"Accept States : {sorted(nfa.accept_states)}")
             result_str = "ACCEPTED" if accepted else "REJECTED"
-            print(f"\nRESULT : {result_str}")
-            print("=" * 50)
+            print(f"RESULT : {result_str}")
 
         return accepted
 
